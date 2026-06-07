@@ -370,30 +370,64 @@ Formal rule: For every FD X → Y in the table, at least one must be true:
 
 ### Violation Example
 
-Table: `Employee(EmpID, DeptID, DeptName)`  
+Table: `Employee(EmpID, EmpName, DeptID, DeptName)`  
 Primary Key = EmpID
+
+**Actual data in the table:**
+
+| EmpID | EmpName | DeptID | DeptName |
+|---|---|---|---|
+| E1 | Alice | D1 | Engineering |
+| E2 | Bob | D1 | Engineering |
+| E3 | Carol | D2 | Marketing |
+| E4 | Dave | D2 | Marketing |
+
+**Functional Dependencies:**
 
 | Dependency | Type |
 |---|---|
+| EmpID → EmpName | Direct ✓ |
 | EmpID → DeptID | Direct ✓ |
 | DeptID → DeptName | **Transitive** ✗ (non-prime → non-prime) |
 | EmpID → DeptName | Transitive through DeptID ✗ |
 
-`DeptName` depends on `DeptID`, not on `EmpID` directly.
+`DeptName` depends on `DeptID`, not on `EmpID` directly. `DeptID` is a non-prime attribute and it is determining another non-prime attribute `DeptName`.
+
+**Problems this causes:**
+- `Engineering` stored for every employee in that dept → **redundancy**
+- Department renamed? Must update every employee row → **update anomaly**
+- All Engineering employees leave? Department record is lost → **delete anomaly**
+
+### Visual: Transitive Dependency Chain
+
+```
+EmpID ──→ DeptID ──→ DeptName
+  ↑                      ↑
+Primary Key         Depends on DeptID,
+                    not directly on EmpID
+                    → transitive dependency ✗
+```
 
 ### After 3NF — Decompose
 
 **Employee table:**
-| EmpID | DeptID |
-|---|---|
-| E1 | D1 |
+| EmpID | EmpName | DeptID |
+|---|---|---|
+| E1 | Alice | D1 |
+| E2 | Bob | D1 |
+| E3 | Carol | D2 |
+| E4 | Dave | D2 |
 
 **Department table:**
 | DeptID | DeptName |
 |---|---|
 | D1 | Engineering |
+| D2 | Marketing |
 
-Transitive dependency removed.
+Now `DeptName` is stored once per department — transitive dependency removed.
+
+### Key Point
+3NF violation requires a **single-column PK** (or at least a non-prime attribute as determinant). If you already have a composite PK and removed partial deps (2NF), look for chains like `PK → A → B` where A and B are both non-prime.
 
 ---
 
@@ -407,28 +441,77 @@ Transitive dependency removed.
 
 ### When 3NF is satisfied but BCNF is not
 
-Table: `CourseInstructor(StudentID, CourseID, InstructorID)`  
+Table: `CourseInstructor(StudentID, CourseID, InstructorID)`
+
+**Business Rules:**
 - Each instructor teaches only one course
-- Each student can enroll with only one instructor per course
+- Each student enrolls with exactly one instructor per course
 
-Candidate Keys: (StudentID, CourseID) and (StudentID, InstructorID)  
-FDs:
-- (StudentID, CourseID) → InstructorID
-- InstructorID → CourseID  ← **InstructorID is not a super key, but CourseID is a prime attribute**
+**Actual data in the table:**
 
-This satisfies 3NF (Y=CourseID is prime) but **violates BCNF** (X=InstructorID is not a super key).
+| StudentID | CourseID | InstructorID |
+|---|---|---|
+| S1 | DBMS | I01 |
+| S1 | OS | I02 |
+| S2 | DBMS | I01 |
+| S2 | DBMS | I03 |
+| S3 | OS | I02 |
+
+**Candidate Keys:**
+- `(StudentID, CourseID)` → uniquely identifies a row ✓
+- `(StudentID, InstructorID)` → uniquely identifies a row ✓
+
+Both are candidate keys → all three attributes are **prime attributes**.
+
+**Functional Dependencies:**
+
+| Dependency | Type |
+|---|---|
+| (StudentID, CourseID) → InstructorID | Full ✓ |
+| (StudentID, InstructorID) → CourseID | Full ✓ |
+| InstructorID → CourseID | ✗ **InstructorID is NOT a super key** |
+
+**Why 3NF is satisfied here:**
+- `InstructorID → CourseID` — X (InstructorID) is not a super key, BUT Y (CourseID) is a prime attribute
+- 3NF says: allowed if Y is prime → **3NF passes** ✓
+
+**Why BCNF is violated:**
+- BCNF says: for every FD X → Y, X must be a super key — **no exceptions**
+- `InstructorID → CourseID` — InstructorID alone is NOT a super key → **BCNF fails** ✗
+
+**Problem this causes:**
+- `I01 → DBMS` is repeated for every student who takes DBMS with I01 → redundancy
+- If I01 switches to OS, must update multiple rows → update anomaly
+
+### Visual: BCNF Violation
+
+```
+(StudentID, CourseID) ──→ InstructorID   ← determinant is super key ✓
+(StudentID, InstructorID) ──→ CourseID   ← determinant is super key ✓
+InstructorID ──→ CourseID               ← determinant is NOT a super key ✗
+```
 
 ### After BCNF — Decompose
 
-**InstructorCourse:**
+**InstructorCourse** (captures InstructorID → CourseID):
 | InstructorID | CourseID |
 |---|---|
 | I01 | DBMS |
+| I02 | OS |
+| I03 | DBMS |
 
-**StudentInstructor:**
+**StudentInstructor** (captures enrollment):
 | StudentID | InstructorID |
 |---|---|
-| 1 | I01 |
+| S1 | I01 |
+| S1 | I02 |
+| S2 | I01 |
+| S2 | I03 |
+| S3 | I02 |
+
+Now every determinant in both tables is a super key — BCNF satisfied.
+
+**Trade-off:** The FD `(StudentID, CourseID) → InstructorID` is no longer directly verifiable from a single table — BCNF **lost a functional dependency**. This is the classic 3NF vs BCNF trade-off.
 
 ### 3NF vs BCNF
 
