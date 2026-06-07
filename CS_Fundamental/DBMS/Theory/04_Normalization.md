@@ -294,6 +294,17 @@ Each cell now has exactly one value. Primary Key = (StudentID, Course).
 Table: `Enrollment(StudentID, CourseID, StudentName, CourseName, Grade)`  
 Primary Key = (StudentID, CourseID)
 
+**Actual data in the table:**
+
+| StudentID | CourseID | StudentName | CourseName | Grade |
+|---|---|---|---|---|
+| 1 | C01 | Alice | DBMS | A |
+| 1 | C02 | Alice | OS | B |
+| 2 | C01 | Bob | DBMS | A |
+| 2 | C03 | Bob | CN | C |
+
+**Functional Dependencies:**
+
 | Dependency | Type |
 |---|---|
 | (StudentID, CourseID) → Grade | Full dependency ✓ |
@@ -302,24 +313,48 @@ Primary Key = (StudentID, CourseID)
 
 `StudentName` depends only on `StudentID` — not the full key. Same for `CourseName`.
 
+**Problems this causes:**
+- `Alice` is repeated in every row she is enrolled in → **redundancy**
+- If Alice changes her name, must update multiple rows → **update anomaly**
+- Deleting Bob's last course deletes Bob's name too → **delete anomaly**
+
 ### After 2NF — Decompose
 
 **Student table:**
 | StudentID | StudentName |
 |---|---|
 | 1 | Alice |
+| 2 | Bob |
 
 **Course table:**
 | CourseID | CourseName |
 |---|---|
 | C01 | DBMS |
+| C02 | OS |
+| C03 | CN |
 
 **Enrollment table:**
 | StudentID | CourseID | Grade |
 |---|---|---|
 | 1 | C01 | A |
+| 1 | C02 | B |
+| 2 | C01 | A |
+| 2 | C03 | C |
 
-Partial dependencies removed — each table has a simple primary key with full dependencies.
+Now `StudentName` is stored once, `CourseName` is stored once — no partial dependencies.
+
+### Visual: Partial Dependency Map
+
+```
+Composite PK = (StudentID, CourseID)
+
+StudentID ──────────────→ StudentName   ← partial (only left part of PK)
+           CourseID ────→ CourseName    ← partial (only right part of PK)
+(StudentID, CourseID) ──→ Grade         ← full dependency ✓
+```
+
+### Key Point
+2NF violation is **only possible with a composite primary key**. If a table has a single-column PK, it is automatically in 2NF (there is no "part of the key" to partially depend on).
 
 ---
 
