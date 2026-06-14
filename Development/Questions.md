@@ -5,3 +5,8 @@ Explain different retry mechanisms and their use cases.
  Why is a Circuit Breaker required when working with Kafka-based systems?
  • What is Kafka Rebalancing?
  • What are the downsides of Kafka rebalancing?
+
+ - OAuth vs JWT
+ - How token expiration works
+ - Can JWTs be invalidated?
+ - Refresh token flows
